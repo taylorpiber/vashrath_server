@@ -1,4 +1,4 @@
 <template>
-    <p>Home</p>
+    <p>Server</p>
 </template>
 <script></script>
