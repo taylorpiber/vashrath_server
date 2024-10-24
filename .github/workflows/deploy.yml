@@ -1,0 +1,54 @@
+name: Deploy Vashrath Server Administration
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Baixando Codigo
+        uses: actions/checkout@v4
+
+      # Step 2: Set up SSH for deploy and copy files via SCP
+      - name: Copiando os arquivos para o repositório
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 195.35.43.118
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "."
+          target: /www/wwwroot/server.vashrath.com.br
+
+      # Step 3: Install Node.js 20.x and npm 10.x
+      - name: Instalando Node.js e npm
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: 195.35.43.118
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            sudo apt-get remove -y nodejs libnode-dev &&
+            sudo apt-get autoremove -y &&
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - &&
+            sudo apt-get install -y nodejs &&
+            curl -sS https://getcomposer.org/installer | /www/server/php/82/bin/php -- --install-dir=/www/server/php/82/bin --filename=composer
+
+      # Step 4: SSH into server to run deployment commands
+      - name: Executando comandos de configuração
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: 195.35.43.118
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /www/wwwroot/server.vashrath.com.br &&
+            /www/server/php/82/bin/php /www/server/php/82/bin/composer install --no-interaction --prefer-dist --optimize-autoloader &&
+            /www/server/php/82/bin/php artisan migrate --force &&
+            npm install &&
+            npm run build &&
+            /www/server/php/82/bin/php artisan optimize
